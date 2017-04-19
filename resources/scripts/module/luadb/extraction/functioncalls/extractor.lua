@@ -17,11 +17,13 @@ local function extractFunctions(AST, graph, path)
   for i,func in pairs(functions) do
     logger:debug('adding node '..func.name)
     local newNode = hypergraph.node.new()
+    newNode.meta = newNode.meta or {}
+    newNode.meta.type = "function"
+    newNode.meta.modulePath = path
     newNode.data.metrics = func.metrics
     newNode.data.name = func.name
-	newNode.data.position = func.position
-    newNode.data.type = "function"
-    newNode.data.modulePath = path
+    newNode.data.position = func.position
+    newNode.data.tag = func.tag
     graph:addNode(newNode)
     table.insert(nodes, newNode)
   end
@@ -53,7 +55,7 @@ end
 
 
 local function getCalleeFunctionName(call)
-  local from  = ast.getParentNodesByTag(call, "LocalFunction", nil)
+  local from = ast.getParentNodesByTag(call, "LocalFunction", nil)
   if not utils.isEmpty(from) then
     return ast.getChildNodesByTag(from[1], "Name", nil)[1].str
   else
@@ -71,11 +73,13 @@ local function extractFunctionCalls(AST, graph, nodes)
   for calledFunction,functionCalls in pairs(functionsCalls) do
     for index,call in pairs(functionCalls) do
       local newEdge = hypergraph.edge.new()
-      newEdge.label = "FunctionCall"
+      newEdge.label = "calls"
       newEdge.meta  = newEdge.meta or {}
       newEdge.meta.calleeFunction = getCalleeFunctionName(call)
       newEdge.meta.calledFunction = calledFunction
       newEdge.data.text = call.text
+      newEdge.data.position = call.position
+      newEdge.data.tag = call.tag
       newEdge:addSource(hypergraph.node.findByName(nodes, newEdge.meta.calleeFunction))
       newEdge:addTarget(hypergraph.node.findByName(nodes, calledFunction))
               
@@ -93,14 +97,38 @@ local function extractFunctionCalls(AST, graph, nodes)
   return edges
 end
 
-
-local function extract(fileName, graph)
+-- extract function from 3DSoftViz's LuaDB module
+local function extract(luaFileNode, graph)  
+  local path = luaFileNode.data.path
   local graph = graph or hypergraph.graph.new()
-  local AST   = ast.getAST(fileName)
-  local nodes = extractFunctions(AST, graph, fileName)
+  local AST = ast.getAST(path)
+  local nodes = extractFunctions(AST, graph, path)
   local edges = extractFunctionCalls(AST, graph, nodes)
   return { nodes = nodes, edges = edges }
 end
+
+
+-----------------------------------------------
+-- @author Michael Scholtz
+-----------------------------------------------
+local function extractFromString(string, graph)
+  local graph = graph or hypergraph.graph.new()
+  local AST   = ast.getASTFromString(string)
+  local nodes = extractFunctions(AST, graph, "source:string")
+  local edges = extractFunctionCalls(AST, graph, nodes)
+  return { nodes = nodes, edges = edges }
+end
+
+-----------------------------------------------
+-- @author Michael Scholtz
+-----------------------------------------------
+local function extractFromAST(ast, graph)
+  local graph = graph or hypergraph.graph.new()
+  local nodes = extractFunctions(ast, graph, "source:ast")
+  local edges = extractFunctionCalls(ast, graph, nodes)
+  return { nodes = nodes, edges = edges }
+end
+
 
 -----------------------------------------------
 -- Return
@@ -108,7 +136,9 @@ end
 
 return
 {
-  extract      = extract,
+  extract = extract,
+  extractFromString = extractFromString,
+  extractFromAST = extractFromAST,
   extractNodes = extractFunctions,
   extractEdges = extractFunctionCalls
 }

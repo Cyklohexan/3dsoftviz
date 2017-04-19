@@ -59,6 +59,24 @@ function pGraph:addEdge(edge)
   end
 end
 
+-------------------------------- Remove functions
+--[[
+function pGraph:removeNode(node)
+  table.insert(self.nodes, node)
+  if self.NodeMapper then
+    self.NodeMapper:save(node)
+  end
+end
+
+
+function pGraph:removeEdge(edge)
+  table.insert(self.edges, edge)
+  if self.EdgeMapper then
+    self.EdgeMapper:save(edge)
+  end
+end
+--]]
+
 -------------------------------- Print functions
 
 function pGraph:printNodes()
@@ -98,8 +116,17 @@ end
 
 -------------------------------- Find functions
  
+-- get all nodes with selected id
+function pGraph:findNodeByID(id)
+  for i,node in pairs(self.nodes) do
+    if (node.id == id) then
+      return node
+    end
+  end
+end
+
 -- get all nodes with selected name
-function pGraph:findNodeByName(name)
+function pGraph:findNodesByName(name)
   local occurrences = {}
   for i,node in pairs(self.nodes) do
     if node.data.name and (node.data.name == name) then
@@ -108,7 +135,17 @@ function pGraph:findNodeByName(name)
   end
   return occurrences
 end
- 
+
+ -- get all nodes with selected type
+function pGraph:findNodesByType(type)
+  local occurrences = {}
+  for i,node in pairs(self.nodes) do
+    if node.meta.type and (node.meta.type == type) then
+      table.insert(occurrences, node)
+    end
+  end
+  return occurrences
+end
  
 -- get all ids for nodes with selected name
 function pGraph:findNodeIdsByName(name)
@@ -119,6 +156,39 @@ function pGraph:findNodeIdsByName(name)
     end
   end
   return occurrence_ids
+end
+
+-- get all edges with selected source ID and selected label
+function pGraph:findEdgesBySource(sourceID, label)
+  local occurrences = {}
+  for i,edge in pairs(self.edges) do
+    if (edge.label == label) and (edge.from[1].id == sourceID) then
+      table.insert(occurrences, edge)
+    end
+  end
+  return occurrences
+end
+
+-- get all edges with selected label
+function pGraph:findEdgesByLabel(label)
+  local occurrence = {}
+  for i,edge in pairs(self.edges) do
+    if edge.label and (edge.label == label) then
+      table.insert(occurrence, edge)
+    end
+  end
+  return occurrence
+end
+
+-- get all edges with selected source ID and selected label
+function pGraph:findEdgesBySource(sourceID, label)
+  local occurrences = {}
+  for i,edge in pairs(self.edges) do
+    if (edge.label == label) and (edge.from[1].id == sourceID) then
+      table.insert(occurrences, edge)
+    end
+  end
+  return occurrences
 end
 
 -----------------------------------------------
